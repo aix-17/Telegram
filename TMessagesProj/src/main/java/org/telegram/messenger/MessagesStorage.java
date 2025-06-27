@@ -281,18 +281,8 @@ public class MessagesStorage extends BaseController {
 
     public void openDatabase(int openTries) {
         if (!NativeLoader.loaded()) {
-            int tryCount = 0;
-            while (!NativeLoader.loaded()) {
-                try {
-                    Thread.sleep(1000);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-                tryCount++;
-                if (tryCount > 5) {
-                    break;
-                }
-            }
+            NativeLoader.addOnLoadedRunnable(() -> storageQueue.postRunnable(() -> openDatabase(openTries)));
+            return;
         }
         File filesDir = ApplicationLoader.getFilesDirFixed();
         if (currentAccount != 0) {
