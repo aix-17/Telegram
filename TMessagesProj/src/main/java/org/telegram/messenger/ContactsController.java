@@ -63,6 +63,7 @@ public class ContactsController extends BaseController {
     public boolean doneLoadingContacts;
     private boolean contactsBookLoaded;
     private boolean migratingContacts;
+    private long lastPhoneBookHash;
     private String lastContactsVersions = "";
     private ArrayList<Long> delayedContactsUpdate = new ArrayList<>();
     private String inviteLink;
@@ -1001,6 +1002,13 @@ public class ContactsController extends BaseController {
             return;
         }
         Utilities.globalQueue.postRunnable(() -> {
+            long currentHash = calculatePhoneBookHash();
+            if (!force && contactsBookLoaded && lastPhoneBookHash == currentHash) {
+                if (BuildVars.LOGS_ENABLED) {
+                    FileLog.d("phonebook hash not changed");
+                }
+                return;
+            }
             int newPhonebookContacts = 0;
             int serverContactsInPhonebook = 0;
             boolean disableDeletion = true; //disable contacts deletion, because phone numbers can't be compared due to different numbers format
@@ -1323,6 +1331,7 @@ public class ContactsController extends BaseController {
                             contactsBook = contactsMap;
                             contactsSyncInProgress = false;
                             contactsBookLoaded = true;
+            lastPhoneBookHash = currentHash;
                             if (first) {
                                 contactsLoaded = true;
                             }
@@ -1412,6 +1421,7 @@ public class ContactsController extends BaseController {
                                     contactsBook = contactsMap;
                                     contactsSyncInProgress = false;
                                     contactsBookLoaded = true;
+            lastPhoneBookHash = currentHash;
                                     if (first) {
                                         contactsLoaded = true;
                                     }
@@ -1436,6 +1446,7 @@ public class ContactsController extends BaseController {
                         contactsBook = contactsMap;
                         contactsSyncInProgress = false;
                         contactsBookLoaded = true;
+            lastPhoneBookHash = currentHash;
                         if (first) {
                             contactsLoaded = true;
                         }
@@ -1457,6 +1468,7 @@ public class ContactsController extends BaseController {
                     contactsBook = contactsMap;
                     contactsSyncInProgress = false;
                     contactsBookLoaded = true;
+            lastPhoneBookHash = currentHash;
                     if (first) {
                         contactsLoaded = true;
                     }
@@ -1500,6 +1512,34 @@ public class ContactsController extends BaseController {
             }
         }
         return acc;
+    }
+
+    private long calculatePhoneBookHash() {
+        long lastUpdate = 0;
+        int count = 0;
+        Cursor cursor = null;
+        try {
+            ContentResolver cr = ApplicationLoader.applicationContext.getContentResolver();
+            cursor = cr.query(ContactsContract.Contacts.CONTENT_URI, new String[]{ContactsContract.Contacts._ID}, null, null, null);
+            if (cursor != null) {
+                count = cursor.getCount();
+                cursor.close();
+            }
+            cursor = cr.query(ContactsContract.Contacts.CONTENT_URI, new String[]{ContactsContract.Contacts.CONTACT_LAST_UPDATED_TIMESTAMP}, null, null, ContactsContract.Contacts.CONTACT_LAST_UPDATED_TIMESTAMP + " DESC");
+            if (cursor != null && cursor.moveToFirst()) {
+                lastUpdate = cursor.getLong(0);
+            }
+        } catch (Exception e) {
+            FileLog.e(e);
+        } finally {
+            if (cursor != null) {
+                try {
+                    cursor.close();
+                } catch (Exception ignore) {
+                }
+            }
+        }
+        return lastUpdate * 31 + count;
     }
 
     public void loadContacts(boolean fromCache, final long hash) {
