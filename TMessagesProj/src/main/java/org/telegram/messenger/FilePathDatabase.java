@@ -240,18 +240,13 @@ public class FilePathDatabase {
     public void ensureDatabaseCreated() {
         if (!databaseCreated) {
             if (!NativeLoader.loaded()) {
-                int tryCount = 0;
-                while (!NativeLoader.loaded()) {
-                    try {
-                        Thread.sleep(1000);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
+                NativeLoader.addOnLoadedRunnable(() -> postRunnable(() -> {
+                    if (!databaseCreated) {
+                        createDatabase(0, false);
+                        databaseCreated = true;
                     }
-                    tryCount++;
-                    if (tryCount > 5) {
-                        break;
-                    }
-                }
+                }));
+                return;
             }
             createDatabase(0, false);
             databaseCreated = true;

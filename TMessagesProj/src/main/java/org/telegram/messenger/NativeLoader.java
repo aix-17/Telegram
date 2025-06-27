@@ -20,6 +20,8 @@ import java.io.OutputStream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
+import java.util.ArrayList;
+
 public class NativeLoader {
 
     private final static int LIB_VERSION = 49;
@@ -29,6 +31,28 @@ public class NativeLoader {
 
     private static volatile boolean nativeLoaded = false;
     public static StringBuilder log = new StringBuilder();
+    private static final ArrayList<Runnable> onLoadedRunnables = new ArrayList<>();
+
+    private static void runCallbacks() {
+        if (!onLoadedRunnables.isEmpty()) {
+            for (int a = 0; a < onLoadedRunnables.size(); a++) {
+                try {
+                    onLoadedRunnables.get(a).run();
+                } catch (Throwable ignore) {
+                    FileLog.e(ignore);
+                }
+            }
+            onLoadedRunnables.clear();
+        }
+    }
+
+    public static synchronized void addOnLoadedRunnable(Runnable runnable) {
+        if (nativeLoaded) {
+            runnable.run();
+        } else {
+            onLoadedRunnables.add(runnable);
+        }
+    }
 
     private static File getNativeLibraryDir(Context context) {
         File f = null;
@@ -84,6 +108,7 @@ public class NativeLoader {
             try {
                 System.load(destLocalFile.getAbsolutePath());
                 nativeLoaded = true;
+                runCallbacks();
             } catch (Error e) {
                 FileLog.e(e);
             }
@@ -119,6 +144,7 @@ public class NativeLoader {
             try {
                 System.loadLibrary(LIB_NAME);
                 nativeLoaded = true;
+                runCallbacks();
                 if (BuildVars.LOGS_ENABLED) {
                     FileLog.d("loaded normal lib");
                 }
@@ -137,6 +163,7 @@ public class NativeLoader {
                     try {
                         System.loadLibrary(LIB_NAME);
                         nativeLoaded = true;
+                        runCallbacks();
                         return;
                     } catch (Error e) {
                         FileLog.e(e);
@@ -155,6 +182,7 @@ public class NativeLoader {
                     }
                     System.load(destLocalFile.getAbsolutePath());
                     nativeLoaded = true;
+                    runCallbacks();
                     return;
                 } catch (Error e) {
                     log.append(e).append("\n");
@@ -179,6 +207,7 @@ public class NativeLoader {
         try {
             System.loadLibrary(LIB_NAME);
             nativeLoaded = true;
+            runCallbacks();
         } catch (Error e) {
             FileLog.e(e);
             log.append("184: ").append(e).append("\n");
