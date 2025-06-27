@@ -1419,9 +1419,8 @@ public class ImageLoader {
                                         image.recycle();
                                         image = nbitmap;
                                     }
-                                    Utilities.blurBitmap(image, 7, opts.inPurgeable ? 0 : 1, image.getWidth(), image.getHeight(), image.getRowBytes());
-                                    Utilities.blurBitmap(image, 7, opts.inPurgeable ? 0 : 1, image.getWidth(), image.getHeight(), image.getRowBytes());
-                                    Utilities.blurBitmap(image, 7, opts.inPurgeable ? 0 : 1, image.getWidth(), image.getHeight(), image.getRowBytes());
+                                    Utilities.blurBitmap(image, 7, opts.inPurgeable ? 0 : 1,
+                                            image.getWidth(), image.getHeight(), image.getRowBytes());
                                 }
                             } else if (blurType == 0 && opts.inPurgeable) {
                                 Utilities.pinBitmap(image);
