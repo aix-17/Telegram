@@ -76,27 +76,27 @@ public class SQLiteCursor {
 	}
 
 	public boolean next() throws SQLiteException {
-		int res = preparedStatement.step(preparedStatement.getStatementHandle());
-		if (res == -1) {
-			int repeatCount = 6;
-			while (repeatCount-- != 0) {
-				try {
-					if (BuildVars.LOGS_ENABLED) {
-						FileLog.d("sqlite busy, waiting...");
-					}
-					Thread.sleep(500);
-					res = preparedStatement.step();
-					if (res == 0) {
-						break;
-					}
-				} catch (Exception e) {
-					FileLog.e(e);
-				}
-			}
-			if (res == -1) {
-				throw new SQLiteException("sqlite busy");
-			}
-		}
+                int res = preparedStatement.step(preparedStatement.getStatementHandle());
+                if (res == -1) {
+                        int attempts = 10;
+                        while (attempts-- > 0) {
+                                try {
+                                        if (BuildVars.LOGS_ENABLED) {
+                                                FileLog.d("sqlite busy, retrying...");
+                                        }
+                                        Thread.yield();
+                                        res = preparedStatement.step();
+                                        if (res != -1) {
+                                                break;
+                                        }
+                                } catch (SQLiteException e) {
+                                        throw e;
+                                }
+                        }
+                        if (res == -1) {
+                                throw new SQLiteException("sqlite busy");
+                        }
+                }
 		inRow = (res == 0);
 		return inRow;
 	}
